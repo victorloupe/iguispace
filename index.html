@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prancha Técnica iGUI – Gerador</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<link rel="stylesheet" href="styles.css?v=20260527">
+</head>
+<body>
+
+<header>
+  <img id="headerLogo" data-logo="igui" style="height:44px;width:auto;display:block" alt="iGUI">
+  <div>
+    <h1>PRANCHA <span>TÉCNICA</span></h1>
+    <div class="hdr-sub">Gerador iGUi &nbsp;·&nbsp; By: Victor L.</div>
+  </div>
+  <div class="hdr-right">
+    <div class="save-indicator">
+      <div class="save-dot" id="saveDot"></div>
+      <span id="saveLabel">Aguardando...</span>
+    </div>
+    <div class="edit-badge" id="editBadge">Editando: <span id="editBadgeId"></span></div>
+  </div>
+</header>
+
+<!-- Layout principal: sidebar + conteúdo -->
+<div class="layout">
+
+  <!-- SIDEBAR DE Espaço iGUi -->
+  <aside class="sidebar">
+    <div class="sidebar-label">ETAPAS <span class="sidebar-step-count" id="sidebarStepCount">1 / 6</span></div>
+    <!-- Barra de progresso horizontal -->
+    <div class="sidebar-prog-wrap">
+      <div class="sidebar-prog-fill" id="pFill" style="width:16.6%"></div>
+    </div>
+    <nav class="steps">
+      <button class="stp active" onclick="ir(0)"><span class="stp-n">1</span><span class="stp-txt">Identificação</span><span class="stp-check" id="chk-0"></span></button>
+      <button class="stp" onclick="ir(1)"><span class="stp-n">2</span><span class="stp-txt">Projeto 3D</span><span class="stp-check" id="chk-1"></span></button>
+      <button class="stp" onclick="ir(2)"><span class="stp-n">3</span><span class="stp-txt">Descritivo</span><span class="stp-check" id="chk-2"></span></button>
+      <button class="stp" onclick="ir(3)"><span class="stp-n">4</span><span class="stp-txt">Revestimentos<span class="stp-cnt" id="cnt-3"></span></span><span class="stp-check" id="chk-3"></span></button>
+      <button class="stp" onclick="ir(4)"><span class="stp-n">5</span><span class="stp-txt">Mobiliário<span class="stp-cnt" id="cnt-4"></span></span><span class="stp-check" id="chk-4"></span></button>
+      <button class="stp" onclick="ir(5)"><span class="stp-n">6</span><span class="stp-txt">Paisagismo<span class="stp-cnt" id="cnt-5"></span></span><span class="stp-check" id="chk-5"></span></button>
+    </nav>
+
+    <!-- Ações na base da sidebar -->
+    <div class="sidebar-actions">
+      <!-- Configurações de Prancha (Ficam no topo da base) -->
+      <button class="sdb-btn sdb-gerar" onclick="gerarPDF()" id="btnGerar">
+        <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 11v1a2 2 0 002 2h8a2 2 0 002-2v-1"/></svg>
+        <span>Gerar PDF</span>
+      </button>
+      <button class="sdb-btn" onclick="salvarSessao()" id="btnSalvarSessao">
+        <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l-5 5-2-2"/><path d="M2 9v3a2 2 0 002 2h8a2 2 0 002-2V9"/></svg>
+        <span>Salvar Sessão</span>
+      </button>
+      <label class="sdb-btn">
+        <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6v-1a2 2 0 012-2h1l2-2h4a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2v-1"/><path d="M1 9h8M6 6l3 3-3 3"/></svg>
+        <span>Carregar Sessão</span>
+        <input type="file" id="importInput" accept=".igui" onchange="importarSessao(this)" style="display:none">
+      </label>
+      <button class="sdb-btn sdb-danger" onclick="novaPrancha()">
+        <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M6 7v5M10 7v5M5 4l.5 9h5l.5-9"/></svg>
+        <span>Nova Prancha</span>
+      </button>
+
+      <div class="sdb-divider"></div>
+      
+      <!-- Navegação de Páginas (Mais minimalista, com ícones SVG iguais) -->
+      <div class="sidebar-label" style="margin-top:6px;margin-bottom:4px;padding-left:8px;">Espaço iGUi</div>
+      <nav class="steps" style="margin-bottom:6px;">
+        <a class="stp active" href="index.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <rect x="2" y="3" width="12" height="10" rx="1.5"/>
+            <path d="M6 3v10M2 7h12"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Gerador</span>
+        </a>
+        <a class="stp" href="projetos.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <rect x="2" y="2" width="5" height="5" rx="1"/>
+            <rect x="9" y="2" width="5" height="5" rx="1"/>
+            <rect x="2" y="9" width="5" height="5" rx="1"/>
+            <rect x="9" y="9" width="5" height="5" rx="1"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Pranchas</span>
+        </a>
+        <a class="stp" href="links.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <path d="M7 9a3 3 0 004.24.1l2-2a3 3 0 00-4.24-4.24l-1.1 1.1"/>
+            <path d="M9 7a3 3 0 00-4.24-.1l-2 2a3 3 0 004.24 4.24l1.1-1.1"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Links</span>
+        </a>
+        <a class="stp" href="admin.html" id="navAdmin" style="display:none">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <circle cx="8" cy="8" r="2.5"/>
+            <path d="M8 1v1.5M8 13.5v1.5M1 8h1.5M13.5 8h1.5M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Admin</span>
+        </a>
+      </nav>
+
+      <div class="sdb-divider"></div>
+      
+      <div class="sidebar-user-card">
+        <div class="su-avatar" id="userAvatar">?</div>
+        <div class="su-info">
+          <span class="su-name" id="hdrUser" title="Usuário logado">—</span>
+          <button class="su-signout" onclick="sbSignOut()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3H3a1 1 0 00-1 1v8a1 1 0 001 1h3"/><path d="M10 5l3 3-3 3M13 8H6"/></svg>
+            Sair
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <script>
+    (function() {
+      const cachedName = localStorage.getItem('igui_user_name');
+      const cachedIsAdmin = localStorage.getItem('igui_is_admin') === 'true';
+      const logoImg = document.getElementById('headerLogo');
+      if (logoImg && typeof LOGO_B64 !== 'undefined') {
+        logoImg.src = 'data:image/png;base64,' + LOGO_B64;
+      }
+      if (cachedName) {
+        const el = document.getElementById('hdrUser');
+        if (el) el.textContent = cachedName;
+        const av = document.getElementById('userAvatar');
+        if (av) {
+          const pts = cachedName.trim().split(/\s+/);
+          av.textContent = ((pts[0]?.[0]||'') + (pts[1]?.[0]||'')).toUpperCase() || '?';
+        }
+      }
+      if (cachedIsAdmin) {
+        const navAdmin = document.getElementById('navAdmin');
+        if (navAdmin) navAdmin.style.display = 'flex';
+        const adminBadge = document.getElementById('adminBadge');
+        if (adminBadge) adminBadge.style.display = 'inline-block';
+      }
+    })();
+  </script>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <div class="main-content">
+    <div class="wrap">
+
+    <!-- RESTORE BANNER -->
+    <div class="restore-banner" id="restoreBanner">
+      <span>💾</span>
+      <div><strong>Dados salvos encontrados!</strong> Deseja continuar de onde parou?</div>
+      <button class="btn-restore" onclick="restaurar()">Restaurar</button>
+      <button class="btn-discard" onclick="descartarRestore()">Descartar</button>
+    </div>
+
+    <!-- SEC 1: IDENTIFICAÇÃO -->
+    <div class="card active" id="s0">
+      <div class="card-hd"><div class="card-ico">🏢</div><div><div class="card-title">IDENTIFICAÇÃO DO PROJETO</div><div class="card-sub">Dados do cliente e informações gerais</div></div></div>
+      <div class="card-bd">
+        <div class="row r3">
+          <div class="field"><label>Loja / Franquia</label><input type="text" id="loja" placeholder="Ex: iGUI João Pessoa" oninput="autoSave()"></div>
+          <div class="field"><label>ID do Projeto</label><input type="text" id="id_projeto" placeholder="Ex: 805672" oninput="autoSave()"></div>
+          <div class="field"><label>Data</label><input type="text" id="data_proj" placeholder="Ex: 13/04/2026" oninput="autoSave()"></div>
+        </div>
+        <div class="row r3">
+          <div class="field"><label>Nome do Cliente</label><input type="text" id="cliente" placeholder="Nome completo do cliente" oninput="autoSave()"></div>
+          <div class="field"><label>Cidade / Estado</label><input type="text" id="cidade" placeholder="Ex: João Pessoa – PB" oninput="autoSave()"></div>
+          <div class="field"><label>Criado por (Usuário)</label><input type="text" id="usuario_logado" readonly style="background:#f0f4f8;cursor:not-allowed;" title="Preenchido automaticamente pelo login"></div>
+        </div>
+        <div class="row r1">
+          <div class="field"><label>Observações (rodapé da prancha)</label><textarea id="obs" placeholder="Ex: Conferir medidas antes da execução" oninput="autoSave()"></textarea></div>
+        </div>
+        <div class="obs-padrao-wrap">
+          <div class="obs-padrao-toggle" id="obsPadraoToggle" onclick="toggleObsPadrao()">
+            <div class="obs-tog-switch" id="obsTogSwitch"></div>
+            <div class="obs-tog-content">
+              <div class="obs-tog-label">⚠️ Observação padrão iGUI — Borda com Cerâmica</div>
+              <div class="obs-tog-text" id="obsTogText">"Não é recomendação da iGUi revestir a borda com cerâmica, a nossa sugestão é a linha de pedras naturais. Cliente fica ciente que a manutenção da borda é de sua responsabilidade."</div>
+            </div>
+          </div>
+        </div>
+        <div class="nav-acts"><button class="btn-nav primary" onclick="ir(1)">Próximo: Projeto 3D →</button></div>
+      </div>
+    </div>
+
+    <!-- SEC 2: PROJETO 3D -->
+    <div class="card" id="s1">
+      <div class="card-hd"><div class="card-ico">🏊</div><div><div class="card-title">PROJETO 3D</div><div class="card-sub">Renders e perspectivas — grade 2×2 na capa da prancha</div></div></div>
+      <div class="card-bd">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:4px;">Insira até <strong>4 vistas</strong> do projeto 3D e a <strong>imagem com medidas do deck</strong>. As imagens serão usadas automaticamente nas outras abas.</p>
+        <div class="img-grid g4">
+          <div class="slot-wrap"><div class="slot" id="sl-3d-0"><input type="file" accept="image/*" onchange="loadImg(this,'3d',0)"><div class="ph"><div class="i">🖼️</div><div class="t">Vista 1</div></div><button class="rm" onclick="rmImg('3d',0,event)">✕</button></div><div class="slot-lbl">Vista 1</div></div>
+          <div class="slot-wrap"><div class="slot" id="sl-3d-1"><input type="file" accept="image/*" onchange="loadImg(this,'3d',1)"><div class="ph"><div class="i">🖼️</div><div class="t">Vista 2</div></div><button class="rm" onclick="rmImg('3d',1,event)">✕</button></div><div class="slot-lbl">Vista 2</div></div>
+          <div class="slot-wrap"><div class="slot" id="sl-3d-2"><input type="file" accept="image/*" onchange="loadImg(this,'3d',2)"><div class="ph"><div class="i">🖼️</div><div class="t">Vista 3</div></div><button class="rm" onclick="rmImg('3d',2,event)">✕</button></div><div class="slot-lbl">Vista 3</div></div>
+          <div class="slot-wrap"><div class="slot" id="sl-3d-3"><input type="file" accept="image/*" onchange="loadImg(this,'3d',3)"><div class="ph"><div class="i">🖼️</div><div class="t">Vista Superior</div></div><button class="rm" onclick="rmImg('3d',3,event)">✕</button></div><div class="slot-lbl">Vista Superior</div></div>
+        </div>
+        <div class="div" style="margin-top:16px"><span>📐 Imagem com Medidas do Deck</span></div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px;">Esta imagem será usada automaticamente na página de Descritivo Técnico.</p>
+        <div style="max-width:260px">
+          <div class="slot-wrap"><div class="slot" id="sl-3d-4" style="aspect-ratio:16/9"><input type="file" accept="image/*" onchange="loadImg(this,'3d',4)"><div class="ph"><div class="i">📐</div><div class="t">Medidas do Deck</div></div><button class="rm" onclick="rmImg('3d',4,event)">✕</button></div><div class="slot-lbl">Medidas do Deck — usada no Descritivo</div></div>
+        </div>
+        <div class="nav-acts"><button class="btn-nav" onclick="ir(0)">← Voltar</button><button class="btn-nav primary" onclick="ir(2)">Próximo: Descritivo →</button></div>
+      </div>
+    </div>
+
+    <!-- SEC 3: DESCRITIVO -->
+    <div class="card" id="s2">
+      <div class="card-hd"><div class="card-ico">📋</div><div><div class="card-title">DESCRITIVO TÉCNICO</div><div class="card-sub">Modelo, cerâmica, medidas deck e acessórios</div></div></div>
+      <div class="card-bd">
+        <div class="div"><span>Imagens do Deck (sincronizadas automaticamente)</span></div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+          As imagens abaixo são preenchidas automaticamente a partir do <strong>Projeto 3D</strong>.<br>
+          <span style="color:var(--blue)">Vista 1 do 3D</span> → painel esquerdo &nbsp;|&nbsp; <span style="color:var(--blue)">Medidas do Deck</span> → painel direito.
+        </p>
+        <div class="img-grid g2" id="deckPreview">
+          <div class="slot-wrap">
+            <div class="slot has-preview" id="sl-deck-preview-0" style="pointer-events:none;opacity:.85">
+              <div class="ph"><div class="i">🔗</div><div class="t">Vista 1 do Projeto 3D</div></div>
+            </div>
+            <div class="slot-lbl">Vista do Projeto (automática)</div>
+          </div>
+          <div class="slot-wrap">
+            <div class="slot has-preview" id="sl-deck-preview-1" style="pointer-events:none;opacity:.85">
+              <div class="ph"><div class="i">🔗</div><div class="t">Medidas do Deck (automática)</div></div>
+            </div>
+            <div class="slot-lbl">Medidas do Deck (automática)</div>
+          </div>
+        </div>
+        <div class="div"><span>Piscina e Cerâmica</span></div>
+        <div class="row r2">
+          <div class="field"><label>Modelo da Piscina</label><input type="text" id="modelo" list="modelos-igui" placeholder="Ex: Mod016 – 7,00 × 3,50 m" oninput="autoSave()"></div>
+          <div class="field"><label>Marca da Cerâmica</label><select id="ceramica_marca" onchange="onCeramicaMarcaChange(this.value)" style="border:1.5px solid var(--border);border-radius:6px;padding:9px 13px;font-family:'Inter',sans-serif;font-size:14px;width:100%"><option value="">-- Selecione --</option><option value="Atlas">Atlas</option><option value="Villagres">Villagres</option><option value="Outra">Outra</option></select></div>
+        </div>
+        <div class="row r3">
+          <div class="field" id="ceramica-nome-field"><label>Nome / Código Cerâmica</label><input type="text" id="ceramica_nome" placeholder="Ex: Acqua Blu" oninput="autoSave()"></div>
+          <div class="field"><label>Tamanho Real</label><input type="text" id="ceramica_tamanho" placeholder="Ex: 10 × 10 cm" oninput="autoSave()"></div>
+          <div class="field"><label>Rejunte</label><input type="text" id="ceramica_rejunte" placeholder="Ex: Cinza Platina" oninput="autoSave()"></div>
+        </div>
+        <div class="div"><span>Imagem da Cerâmica</span></div>
+        <div style="max-width:180px" id="ceramica-img-area">
+          <div class="slot" id="sl-cer-0" style="aspect-ratio:1"><input type="file" accept="image/*" onchange="loadImg(this,'cer',0)"><div class="ph"><div class="i">🪟</div><div class="t">Amostra Cerâmica</div></div><button class="rm" onclick="rmImg('cer',0,event)">✕</button></div>
+        </div>
+        <div class="div"><span>Acessórios e Dispositivos</span></div>
+        <div class="acc-grid" id="accGrid"></div>
+        <div class="nav-acts"><button class="btn-nav" onclick="ir(1)">← Voltar</button><button class="btn-nav primary" onclick="ir(3)">Próximo: Revestimentos →</button></div>
+      </div>
+    </div>
+
+    <!-- SEC 4: REVESTIMENTOS -->
+    <div class="card" id="s3">
+      <div class="card-hd"><div class="card-ico">🪵</div><div><div class="card-title">REVESTIMENTOS</div><div class="card-sub">Pisos, decks, pedras e acabamentos externos</div></div></div>
+      <div class="card-bd">
+        <div class="sec-toggle-wrap" id="sectog-rev" onclick="toggleSec('rev')">
+          <div class="sec-tog-sw"></div>
+          <span id="sectog-lbl-rev">⚠️ Esta seção está <strong>DESATIVADA</strong> — não aparecerá no PDF. Clique para ativar.</span>
+        </div>
+        <div class="div"><span>Imagens de Referência (do Projeto 3D)</span></div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;">Escolha quais imagens do Projeto 3D aparecem nesta página da prancha.</p>
+        <div class="img-selector-grid" id="imgsel-rev">
+          <div class="img-sel-col">
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Painel Esquerdo</label>
+            <div class="img-sel-options" id="imgsel-rev-0"></div>
+            <div class="img-sel-preview" id="imgsel-preview-rev-0"></div>
+          </div>
+          <div class="img-sel-col">
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Painel Direito</label>
+            <div class="img-sel-options" id="imgsel-rev-1"></div>
+            <div class="img-sel-preview" id="imgsel-preview-rev-1"></div>
+          </div>
+        </div>
+        <div class="div"><span>Itens de Revestimento</span></div>
+        <div class="items-list" id="lst-rev"></div>
+        <div class="btn-add-wrap">
+          <button class="btn-add" onclick="addItem('rev')">＋ Adicionar Item</button>
+          <span class="item-count" id="item-count-rev">0 / 6</span>
+        </div>
+        <div class="nav-acts"><button class="btn-nav" onclick="ir(2)">← Voltar</button><button class="btn-nav primary" onclick="ir(4)">Próximo: Mobiliário →</button></div>
+      </div>
+    </div>
+
+    <!-- SEC 5: MOBILIÁRIO -->
+    <div class="card" id="s4">
+      <div class="card-hd"><div class="card-ico">🪑</div><div><div class="card-title">MOBILIÁRIO</div><div class="card-sub">Espreguiçadeiras, mesas, cadeiras e decoração</div></div></div>
+      <div class="card-bd">
+        <div class="sec-toggle-wrap" id="sectog-mob" onclick="toggleSec('mob')">
+          <div class="sec-tog-sw"></div>
+          <span id="sectog-lbl-mob">⚠️ Esta seção está <strong>DESATIVADA</strong> — não aparecerá no PDF. Clique para ativar.</span>
+        </div>
+        <div class="div"><span>Imagens de Referência (do Projeto 3D)</span></div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;">Escolha quais imagens do Projeto 3D aparecem nesta página da prancha.</p>
+        <div class="img-selector-grid" id="imgsel-mob">
+          <div class="img-sel-col">
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Painel Esquerdo</label>
+            <div class="img-sel-options" id="imgsel-mob-0"></div>
+            <div class="img-sel-preview" id="imgsel-preview-mob-0"></div>
+          </div>
+          <div class="img-sel-col">
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Painel Direito</label>
+            <div class="img-sel-options" id="imgsel-mob-1"></div>
+            <div class="img-sel-preview" id="imgsel-preview-mob-1"></div>
+          </div>
+        </div>
+        <div class="div"><span>Itens de Mobiliário</span></div>
+        <div class="items-list" id="lst-mob"></div>
+        <div class="btn-add-wrap">
+          <button class="btn-add" onclick="addItem('mob')">＋ Adicionar Item</button>
+          <span class="item-count" id="item-count-mob">0 / 6</span>
+        </div>
+        <div class="nav-acts"><button class="btn-nav" onclick="ir(3)">← Voltar</button><button class="btn-nav primary" onclick="ir(5)">Próximo: Paisagismo →</button></div>
+      </div>
+    </div>
+
+    <!-- SEC 6: PAISAGISMO -->
+    <div class="card" id="s5">
+      <div class="card-hd"><div class="card-ico">🌿</div><div><div class="card-title">PAISAGISMO</div><div class="card-sub">Plantas, jardins e elementos naturais — adicione por espécie ou área</div></div></div>
+      <div class="card-bd">
+        <div class="sec-toggle-wrap" id="sectog-pai" onclick="toggleSec('pai')">
+          <div class="sec-tog-sw"></div>
+          <span id="sectog-lbl-pai">⚠️ Esta seção está <strong>DESATIVADA</strong> — não aparecerá no PDF. Clique para ativar.</span>
+        </div>
+        <div class="div"><span>Imagens de Referência (do Projeto 3D)</span></div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;">Escolha quais imagens do Projeto 3D aparecem nesta página da prancha.</p>
+        <div class="img-selector-grid" id="imgsel-pai">
+          <div class="img-sel-col">
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Painel Esquerdo</label>
+            <div class="img-sel-options" id="imgsel-pai-0"></div>
+            <div class="img-sel-preview" id="imgsel-preview-pai-0"></div>
+          </div>
+          <div class="img-sel-col">
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Painel Direito</label>
+            <div class="img-sel-options" id="imgsel-pai-1"></div>
+            <div class="img-sel-preview" id="imgsel-preview-pai-1"></div>
+          </div>
+        </div>
+        <div class="div"><span>Plantas e Elementos</span></div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px;">Adicione cada planta, árvore ou elemento de jardim com uma foto de referência.</p>
+        <div class="items-list" id="lst-pai"></div>
+        <div class="btn-add-wrap">
+          <button class="btn-add" onclick="addItem('pai')">＋ Adicionar Planta / Elemento</button>
+          <span class="item-count" id="item-count-pai">0 / 6</span>
+        </div>
+        <div class="nav-acts"><button class="btn-nav" onclick="ir(4)">← Voltar</button><button class="btn-nav success" onclick="gerarPDF()">⬇ Gerar PDF Final</button></div>
+      </div>
+    </div>
+
+    </div><!-- /wrap -->
+  </div><!-- /main-content -->
+
+</div><!-- /layout -->
+
+<!-- Modal Validação -->
+<div class="modal-overlay" id="validModal">
+  <div class="modal-box">
+    <div class="modal-title"><span>📋</span> Verificação da Prancha</div>
+    <div class="modal-items" id="validItems"></div>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="fecharModal()">Revisar</button>
+      <button class="btn-modal confirm" id="btnConfirmPDF" onclick="confirmarGerarPDF()">Gerar PDF mesmo assim</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nova Prancha -->
+<div class="modal-overlay" id="novaModal">
+  <div class="modal-box">
+    <div class="modal-title"><span>🗑</span> Nova Prancha</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      Isso vai apagar <strong>todos os dados</strong> preenchidos, imagens e itens.<br>
+      Tem certeza que quer começar do zero?
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-modal confirm" style="background:#e74c3c" onclick="confirmarNovaPrancha()">Sim, limpar tudo</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="spin"></div>
+  <div class="load-txt" id="loadTxt">Gerando PDF...</div>
+  <div class="load-sub" id="loadSub">Aguarde, isto pode levar alguns segundos</div>
+  <div class="load-progress-wrap">
+    <div class="load-progress-bar" id="loadProgressBar" style="width:0%"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- Modal Sobrescrever Projeto -->
+<div class="modal-overlay" id="overwriteModal">
+  <div class="modal-box">
+    <div class="modal-title"><span>⚠️</span> Atualizar Prancha</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      Você está editando uma prancha já salva no histórico.<br>
+      Gerar o PDF irá <strong>atualizar o registro existente</strong> e baixar um novo PDF.<br>
+      Deseja continuar?
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-modal confirm" onclick="confirmarOverwrite()">Atualizar e Gerar PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- Datalist modelos iGUi -->
+<datalist id="modelos-igui">
+  <option value="Mod001 – 3,00 × 2,00 m">
+  <option value="Mod002 – 4,00 × 2,50 m">
+  <option value="Mod003 – 5,00 × 3,00 m">
+  <option value="Mod004 – 5,00 × 2,50 m">
+  <option value="Mod005 – 6,00 × 3,00 m">
+  <option value="Mod006 – 6,00 × 3,50 m">
+  <option value="Mod007 – 7,00 × 3,00 m">
+  <option value="Mod008 – 7,00 × 3,50 m">
+  <option value="Mod009 – 8,00 × 3,50 m">
+  <option value="Mod010 – 8,00 × 4,00 m">
+  <option value="Mod011 – 9,00 × 4,00 m">
+  <option value="Mod012 – 9,00 × 4,50 m">
+  <option value="Mod013 – 10,00 × 4,00 m">
+  <option value="Mod014 – 10,00 × 4,50 m">
+  <option value="Mod015 – 10,00 × 5,00 m">
+  <option value="Mod016 – 7,00 × 3,50 m">
+  <option value="Mod017 – 6,50 × 3,50 m">
+  <option value="Mod018 – 5,50 × 3,00 m">
+  <option value="Mod019 – 8,50 × 4,00 m">
+  <option value="Mod020 – 11,00 × 5,00 m">
+  <option value="Infinita – 7,00 × 3,50 m">
+  <option value="Infinita – 8,00 × 4,00 m">
+  <option value="Infinita – 10,00 × 4,50 m">
+  <option value="Spa – 2,50 × 2,00 m">
+  <option value="Spa – 3,00 × 2,50 m">
+</datalist>
+
+<script src="app.js?v=20260527"></script>
+</body>
+</html>

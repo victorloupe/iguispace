@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Links — iGUi Pranchas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<link rel="stylesheet" href="styles.css?v=20260527">
+<style>
+  /* ── Links page ── */
+  .links-header{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .links-search{flex:1;min-width:200px;position:relative;}
+  .links-search input{width:100%;padding:9px 14px 9px 36px;border:1.5px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color .15s;background:#fff;}
+  .links-search input:focus{border-color:var(--blue);}
+  .links-search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);}
+
+  .btn-header-action{background:var(--blue);color:#fff;border:none;padding:9px 15px;border-radius:8px;font-family:'Inter',sans-serif;font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background .15s;}
+  .btn-header-action:hover{background:#0099d4;}
+  .btn-header-action.secondary{background:#1a2a3a;}
+  .btn-header-action.secondary:hover{background:#263c50;}
+
+  /* ── Folder sections ── */
+  .folders-wrap{display:flex;flex-direction:column;gap:10px;}
+
+  .folder-section{border:1.5px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;transition:box-shadow .15s;}
+  .folder-section:hover{box-shadow:0 2px 10px rgba(0,0,0,.06);}
+
+  .folder-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none;transition:background .12s;}
+  .folder-header:hover{background:#f4f8fb;}
+
+  .folder-chevron{width:18px;height:18px;flex-shrink:0;color:var(--muted);transition:transform .2s;}
+  .folder-chevron.open{transform:rotate(90deg);}
+
+  .folder-icon{font-size:18px;flex-shrink:0;}
+  .folder-name{font-size:14px;font-weight:700;color:#1a2a3a;flex:1;}
+  .folder-count{font-size:11px;font-weight:600;color:var(--muted);background:#f0f4f7;border-radius:20px;padding:2px 9px;}
+
+  .folder-admin-btns{display:flex;gap:5px;opacity:0;transition:opacity .15s;}
+  .folder-header:hover .folder-admin-btns{opacity:1;}
+  .btn-folder-action{background:transparent;border:1.5px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s;flex-shrink:0;}
+  .btn-folder-action:hover{background:#edf7fd;border-color:var(--blue);color:var(--blue);}
+  .btn-folder-del:hover{background:#fdf2f1 !important;border-color:#e74c3c !important;color:#e74c3c !important;}
+
+  .folder-body{display:none;padding:0 14px 14px;}
+  .folder-body.open{display:block;}
+
+  .folder-add-link{width:100%;background:transparent;border:1.5px dashed var(--border);border-radius:8px;padding:8px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;margin-bottom:10px;transition:all .15s;}
+  .folder-add-link:hover{border-color:var(--blue);color:var(--blue);background:#edf7fd;}
+
+  .links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;}
+  .link-card{background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:7px;transition:box-shadow .15s,border-color .15s;position:relative;}
+  .link-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.07);border-color:#b0c4d4;}
+  .link-title{font-size:13px;font-weight:700;color:#1a2a3a;line-height:1.3;}
+  .link-desc{font-size:12px;color:var(--muted);line-height:1.5;flex:1;}
+  .link-url{font-size:11px;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .link-footer{display:flex;align-items:center;gap:8px;margin-top:4px;}
+  .btn-open{flex:1;background:#1a2a3a;color:#fff;border:none;padding:7px 10px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;display:block;transition:background .15s;}
+  .btn-open:hover{background:var(--blue);}
+  .link-admin-actions{display:flex;gap:5px;}
+  .btn-link-edit,.btn-link-del{background:transparent;border:1.5px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s;}
+  .btn-link-edit:hover{background:#edf7fd;border-color:var(--blue);color:var(--blue);}
+  .btn-link-del:hover{background:#fdf2f1;border-color:#e74c3c;color:#e74c3c;}
+
+  .empty-folder{text-align:center;padding:24px;color:var(--muted);font-size:13px;}
+  .empty-folder .ico{font-size:28px;margin-bottom:8px;}
+
+  .empty-links{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty-links .ico{font-size:40px;margin-bottom:12px;}
+  .empty-links p{font-size:14px;}
+
+  /* ── Search mode: flat grid ── */
+  .flat-grid-wrap .links-grid{margin-top:4px;}
+
+  /* ── Modal ── */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(18,30,42,.7);z-index:500;align-items:center;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.15);}
+  .modal-title{font-size:16px;font-weight:700;color:#1a2a3a;margin-bottom:20px;}
+  .modal-field{margin-bottom:14px;}
+  .modal-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+  .modal-field input,.modal-field textarea,.modal-field select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color .15s;}
+  .modal-field input:focus,.modal-field textarea:focus,.modal-field select:focus{border-color:var(--blue);}
+  .modal-field textarea{resize:vertical;min-height:70px;}
+  .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+  .btn-modal{padding:9px 20px;border-radius:7px;font-family:'Inter',sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:none;}
+  .btn-modal.cancel{background:var(--gray);color:var(--muted);}
+  .btn-modal.cancel:hover{background:#d0dce8;}
+  .btn-modal.confirm{background:#1a2a3a;color:#fff;}
+  .btn-modal.confirm:hover{background:var(--blue);}
+</style>
+</head>
+<body class="pg-projetos">
+
+<header>
+  <img id="headerLogo" data-logo="igui" style="height:44px;width:auto;display:block" alt="iGUI">
+  <div>
+    <h1>LINKS <span>DE REFERÊNCIA</span></h1>
+    <div class="hdr-sub">Biblioteca iGUi &nbsp;·&nbsp; By: Victor L.</div>
+  </div>
+  <div class="hdr-right" style="margin-left:auto;display:flex;gap:10px;align-items:center;">
+    <span id="adminBadge" style="display:none;background:rgba(0,174,239,.15);border:1px solid rgba(0,174,239,.4);color:var(--blue);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;">Admin</span>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-actions" style="margin-top:auto;">
+      <div class="sidebar-label" style="margin-top:6px;margin-bottom:4px;padding-left:8px;">Espaço iGUi</div>
+      <nav class="steps" style="margin-bottom:6px;">
+        <a class="stp" href="index.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <rect x="2" y="3" width="12" height="10" rx="1.5"/>
+            <path d="M6 3v10M2 7h12"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Gerador</span>
+        </a>
+        <a class="stp" href="projetos.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <rect x="2" y="2" width="5" height="5" rx="1"/>
+            <rect x="9" y="2" width="5" height="5" rx="1"/>
+            <rect x="2" y="9" width="5" height="5" rx="1"/>
+            <rect x="9" y="9" width="5" height="5" rx="1"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Pranchas</span>
+        </a>
+        <a class="stp active" href="links.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <path d="M7 9a3 3 0 004.24.1l2-2a3 3 0 00-4.24-4.24l-1.1 1.1"/>
+            <path d="M9 7a3 3 0 00-4.24-.1l-2 2a3 3 0 004.24 4.24l1.1-1.1"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Links</span>
+        </a>
+        <a class="stp" href="admin.html" id="navAdmin" style="display:none">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <circle cx="8" cy="8" r="2.5"/>
+            <path d="M8 1v1.5M8 13.5v1.5M1 8h1.5M13.5 8h1.5M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Admin</span>
+        </a>
+      </nav>
+
+      <div class="sdb-divider"></div>
+
+      <div class="sidebar-user-card">
+        <div class="su-avatar" id="userAvatar">?</div>
+        <div class="su-info">
+          <span class="su-name" id="hdrUser" title="Usuário logado">—</span>
+          <button class="su-signout" onclick="sbSignOut()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3H3a1 1 0 00-1 1v8a1 1 0 001 1h3"/><path d="M10 5l3 3-3 3M13 8H6"/></svg>
+            Sair
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <script>
+    (function() {
+      const cachedName = localStorage.getItem('igui_user_name');
+      const cachedIsAdmin = localStorage.getItem('igui_is_admin') === 'true';
+      const logoImg = document.getElementById('headerLogo');
+      if (logoImg && typeof LOGO_B64 !== 'undefined') {
+        logoImg.src = 'data:image/png;base64,' + LOGO_B64;
+      }
+      if (cachedName) {
+        const el = document.getElementById('hdrUser');
+        if (el) el.textContent = cachedName;
+        const av = document.getElementById('userAvatar');
+        if (av) {
+          const pts = cachedName.trim().split(/\s+/);
+          av.textContent = ((pts[0]?.[0]||'') + (pts[1]?.[0]||'')).toUpperCase() || '?';
+        }
+      }
+      if (cachedIsAdmin) {
+        const navAdmin = document.getElementById('navAdmin');
+        if (navAdmin) navAdmin.style.display = 'flex';
+        const adminBadge = document.getElementById('adminBadge');
+        if (adminBadge) adminBadge.style.display = 'inline-block';
+      }
+    })();
+  </script>
+
+  <div class="main-content">
+    <div class="proj-page-wrap">
+
+      <div class="links-header">
+        <div class="links-search">
+          <svg class="links-search-ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4"/><path d="M11 11l2.5 2.5"/></svg>
+          <input type="text" id="searchInput" placeholder="Buscar links..." oninput="filtrar()">
+        </div>
+        <!-- Admin buttons -->
+        <button class="btn-header-action secondary" id="btnNovaPasta" style="display:none" onclick="abrirModalPasta()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2v12M2 8h12"/></svg>
+          Nova Pasta
+        </button>
+        <button class="btn-header-action" id="btnNovoLink" style="display:none" onclick="abrirModalLink()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2v12M2 8h12"/></svg>
+          Novo Link
+        </button>
+      </div>
+
+      <div id="linksWrap">
+        <div class="empty-links"><div class="ico">🔗</div><p>Carregando links...</p></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: novo/editar link ── -->
+<div class="modal-overlay" id="linkModal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalLinkTitle">Novo Link</div>
+    <div class="modal-field">
+      <label>Título</label>
+      <input type="text" id="linkTitle" placeholder="Ex: Galeria 3D Warehouse — Piscinas">
+    </div>
+    <div class="modal-field">
+      <label>URL</label>
+      <input type="url" id="linkUrl" placeholder="https://...">
+    </div>
+    <div class="modal-field">
+      <label>Pasta / Categoria</label>
+      <select id="linkCategory"></select>
+    </div>
+    <div class="modal-field">
+      <label>Descrição (opcional)</label>
+      <textarea id="linkDesc" placeholder="Breve descrição do conteúdo..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="fecharModais()">Cancelar</button>
+      <button class="btn-modal confirm" onclick="salvarLink()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: nova/editar pasta ── -->
+<div class="modal-overlay" id="pastaModal">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-title" id="modalPastaTitle">Nova Pasta</div>
+    <div class="modal-field">
+      <label>Nome da pasta</label>
+      <input type="text" id="pastaName" placeholder="Ex: Referências 3D">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="fecharModais()">Cancelar</button>
+      <button class="btn-modal confirm" onclick="salvarPasta()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: confirmar exclusão ── -->
+<div class="modal-overlay" id="delModal">
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-title" id="delModalTitle">Excluir</div>
+    <p id="delModalMsg" style="font-size:14px;color:var(--muted);margin-bottom:20px;"></p>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="fecharModais()">Cancelar</button>
+      <button class="btn-modal confirm" style="background:#e74c3c" id="btnConfirmDel">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────
+let todosLinks = [];
+let todasCategorias = [];
+let isAdminUser = false;
+let editandoLinkId = null;
+let editandoPastaId = null;
+let defaultCatForNewLink = null;
+
+// Track open folders (persisted in sessionStorage)
+const OPEN_KEY = 'igui_links_open_folders';
+function getOpenFolders() {
+  try { return new Set(JSON.parse(sessionStorage.getItem(OPEN_KEY) || '[]')); } catch { return new Set(); }
+}
+function setOpenFolders(s) {
+  sessionStorage.setItem(OPEN_KEY, JSON.stringify([...s]));
+}
+
+// ── Toast ──────────────────────────────────────────────
+function showToast(msg, tipo = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${tipo} show`;
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// ── Escape HTML ────────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const session = await sbRequireAuth();
+  if (!session) return;
+
+  const profile = await sbGetProfile();
+  isAdminUser = profile?.role === 'admin';
+
+  const displayName = profile?.name || profile?.email || '—';
+  document.getElementById('hdrUser').textContent = displayName;
+  const av = document.getElementById('userAvatar');
+  if (av && displayName !== '—') {
+    const pts = displayName.trim().split(/\s+/);
+    av.textContent = ((pts[0]?.[0]||'') + (pts[1]?.[0]||'')).toUpperCase() || '?';
+  }
+  if (isAdminUser) {
+    document.getElementById('adminBadge').style.display = 'inline-block';
+    document.getElementById('navAdmin').style.display = 'flex';
+    document.getElementById('btnNovoLink').style.display = 'flex';
+    document.getElementById('btnNovaPasta').style.display = 'flex';
+  }
+
+  if (typeof setLogoImages === 'function') setLogoImages();
+
+  await carregarTudo();
+});
+
+// ── Load data ─────────────────────────────────────────
+async function carregarTudo() {
+  try {
+    [todasCategorias, todosLinks] = await Promise.all([
+      sbListarCategorias(),
+      sbListarLinks()
+    ]);
+    renderTudo();
+  } catch (e) {
+    showToast('Erro ao carregar: ' + e.message, 'err');
+    document.getElementById('linksWrap').innerHTML = `
+      <div class="empty-links" style="color:#e74c3c;background:#fdf2f1;border-radius:12px;padding:40px 20px;">
+        <div class="ico">⚠️</div>
+        <p style="margin-bottom:12px">Erro ao carregar: ${escHtml(e.message)}</p>
+        <button class="btn-open" style="display:inline-block;width:auto;margin:10px auto 0;background:var(--blue);padding:8px 24px;" onclick="carregarTudo()">Tentar Novamente</button>
+      </div>`;
+  }
+}
+
+// ── Render ────────────────────────────────────────────
+function renderTudo() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+
+  if (q) {
+    renderBusca(q);
+  } else {
+    renderPastas();
+  }
+}
+
+function filtrar() {
+  renderTudo();
+}
+
+// Search mode: flat grid
+function renderBusca(q) {
+  const lista = todosLinks.filter(l =>
+    l.title.toLowerCase().includes(q) ||
+    (l.description || '').toLowerCase().includes(q) ||
+    l.url.toLowerCase().includes(q) ||
+    (l.category || '').toLowerCase().includes(q)
+  );
+
+  const wrap = document.getElementById('linksWrap');
+
+  if (!lista.length) {
+    wrap.innerHTML = `<div class="empty-links"><div class="ico">🔍</div><p>Nenhum link encontrado para "<strong>${escHtml(q)}</strong>".</p></div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<div class="flat-grid-wrap"><div class="links-grid" id="flatGrid"></div></div>`;
+  const grid = document.getElementById('flatGrid');
+  lista.forEach(link => grid.appendChild(criarCard(link)));
+}
+
+// Folder mode
+function renderPastas() {
+  const wrap = document.getElementById('linksWrap');
+  const openSet = getOpenFolders();
+
+  if (!todasCategorias.length && !todosLinks.length) {
+    wrap.innerHTML = `<div class="empty-links"><div class="ico">📁</div><p>Nenhuma pasta ainda.${isAdminUser ? ' Clique em <strong>Nova Pasta</strong> para começar.' : ''}</p></div>`;
+    return;
+  }
+
+  // Build category → links map
+  const linksPorCat = {};
+  todosLinks.forEach(l => {
+    const cat = l.category || 'Geral';
+    if (!linksPorCat[cat]) linksPorCat[cat] = [];
+    linksPorCat[cat].push(l);
+  });
+
+  // Collect all category names (from table + any orphan categories in links)
+  const catNomes = new Set(todasCategorias.map(c => c.name));
+  Object.keys(linksPorCat).forEach(c => catNomes.add(c));
+
+  // Sort: known categories first (by position), then orphans alphabetically
+  const catOrdenadas = [
+    ...todasCategorias.map(c => c.name),
+    ...[...catNomes].filter(n => !todasCategorias.find(c => c.name === n)).sort()
+  ];
+
+  // Remove duplicates
+  const seen = new Set();
+  const catFinal = catOrdenadas.filter(n => { if (seen.has(n)) return false; seen.add(n); return true; });
+
+  let html = '<div class="folders-wrap">';
+
+  catFinal.forEach(catName => {
+    const cat = todasCategorias.find(c => c.name === catName);
+    const catId = cat?.id || null;
+    const links = linksPorCat[catName] || [];
+    const isOpen = openSet.has(catName);
+
+    const adminBtns = isAdminUser ? `
+      <div class="folder-admin-btns">
+        <button class="btn-folder-action" onclick="event.stopPropagation();abrirModalPasta('${catId || ''}','${escHtml(catName)}')" title="Renomear pasta">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 2l3 3-8 8H3v-3L11 2z"/></svg>
+        </button>
+        <button class="btn-folder-action btn-folder-del" onclick="event.stopPropagation();confirmarDelPasta('${catId || ''}','${escHtml(catName)}')" title="Excluir pasta">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 4 13 4"/><path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M6 7v5M10 7v5M4 4l1 9h6l1-9"/></svg>
+        </button>
+      </div>` : '';
+
+    html += `
+      <div class="folder-section" id="folder-${escHtml(catName).replace(/\s/g,'_')}">
+        <div class="folder-header" onclick="toggleFolder('${escHtml(catName)}')">
+          <svg class="folder-chevron ${isOpen ? 'open' : ''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>
+          <span class="folder-icon">📁</span>
+          <span class="folder-name">${escHtml(catName)}</span>
+          <span class="folder-count">${links.length} link${links.length !== 1 ? 's' : ''}</span>
+          ${adminBtns}
+        </div>
+        <div class="folder-body ${isOpen ? 'open' : ''}" id="body-${escHtml(catName).replace(/\s/g,'_')}">`;
+
+    if (isAdminUser) {
+      html += `<button class="folder-add-link" onclick="abrirModalLink(null,'${escHtml(catName)}')">＋ Adicionar link nesta pasta</button>`;
+    }
+
+    if (links.length) {
+      html += `<div class="links-grid" id="grid-${escHtml(catName).replace(/\s/g,'_')}"></div>`;
+    } else {
+      html += `<div class="empty-folder"><div class="ico">🔗</div>Nenhum link nesta pasta.</div>`;
+    }
+
+    html += `</div></div>`;
+  });
+
+  // If no categories at all
+  if (!catFinal.length) {
+    html += `<div class="empty-links"><div class="ico">📁</div><p>Nenhuma pasta ainda.${isAdminUser ? ' Clique em <strong>Nova Pasta</strong> para começar.' : ''}</p></div>`;
+  }
+
+  html += '</div>';
+  wrap.innerHTML = html;
+
+  // Populate grids
+  catFinal.forEach(catName => {
+    const links = linksPorCat[catName] || [];
+    if (!links.length) return;
+    const gridEl = document.getElementById('grid-' + catName.replace(/\s/g,'_'));
+    if (gridEl) links.forEach(link => gridEl.appendChild(criarCard(link)));
+  });
+}
+
+function criarCard(link) {
+  const card = document.createElement('div');
+  card.className = 'link-card';
+  const dominio = (() => { try { return new URL(link.url).hostname; } catch { return link.url; } })();
+  card.innerHTML = `
+    <div class="link-title">${escHtml(link.title)}</div>
+    ${link.description ? `<div class="link-desc">${escHtml(link.description)}</div>` : ''}
+    <div class="link-url">${escHtml(dominio)}</div>
+    <div class="link-footer">
+      <a class="btn-open" href="${escHtml(link.url)}" target="_blank" rel="noopener">Abrir →</a>
+      ${isAdminUser ? `
+        <div class="link-admin-actions">
+          <button class="btn-link-edit" onclick="abrirModalLink('${link.id}')" title="Editar">✏️</button>
+          <button class="btn-link-del"  onclick="confirmarDelLink('${link.id}')" title="Excluir">🗑</button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+  return card;
+}
+
+// ── Toggle folder open/close ──────────────────────────
+function toggleFolder(catName) {
+  const openSet = getOpenFolders();
+  const key = catName.replace(/\s/g,'_');
+  const body = document.getElementById('body-' + key);
+  const folder = document.getElementById('folder-' + key);
+  if (!body) return;
+
+  const chevron = folder?.querySelector('.folder-chevron');
+  if (body.classList.contains('open')) {
+    body.classList.remove('open');
+    chevron?.classList.remove('open');
+    openSet.delete(catName);
+  } else {
+    body.classList.add('open');
+    chevron?.classList.add('open');
+    openSet.add(catName);
+  }
+  setOpenFolders(openSet);
+}
+
+// ── Populate category <select> ─────────────────────────
+function popularSelectCat(selectedValue) {
+  const sel = document.getElementById('linkCategory');
+  sel.innerHTML = '';
+  todasCategorias.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.name;
+    opt.textContent = c.name;
+    if (c.name === selectedValue) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  // Fallback: if selected not in list, add it
+  if (selectedValue && !todasCategorias.find(c => c.name === selectedValue)) {
+    const opt = document.createElement('option');
+    opt.value = selectedValue;
+    opt.textContent = selectedValue;
+    opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+// ── Link modal ────────────────────────────────────────
+function abrirModalLink(id = null, catDefault = null) {
+  editandoLinkId = id;
+  defaultCatForNewLink = catDefault;
+  document.getElementById('modalLinkTitle').textContent = id ? 'Editar Link' : 'Novo Link';
+
+  if (id) {
+    const link = todosLinks.find(l => l.id === id);
+    document.getElementById('linkTitle').value = link.title;
+    document.getElementById('linkUrl').value   = link.url;
+    document.getElementById('linkDesc').value  = link.description || '';
+    popularSelectCat(link.category);
+  } else {
+    document.getElementById('linkTitle').value = '';
+    document.getElementById('linkUrl').value   = '';
+    document.getElementById('linkDesc').value  = '';
+    popularSelectCat(catDefault || todasCategorias[0]?.name || 'Geral');
+  }
+  document.getElementById('linkModal').classList.add('show');
+}
+
+async function salvarLink() {
+  const title    = document.getElementById('linkTitle').value.trim();
+  const url      = document.getElementById('linkUrl').value.trim();
+  const category = document.getElementById('linkCategory').value;
+  const description = document.getElementById('linkDesc').value.trim();
+  if (!title || !url) { showToast('Título e URL são obrigatórios', 'err'); return; }
+  try {
+    await sbSalvarLink({ title, url, description, category }, editandoLinkId);
+    fecharModais();
+    await carregarTudo();
+    showToast(editandoLinkId ? '✅ Link atualizado!' : '✅ Link adicionado!', 'ok');
+  } catch (e) {
+    showToast('Erro: ' + e.message, 'err');
+  }
+}
+
+// ── Pasta modal ───────────────────────────────────────
+function abrirModalPasta(id = null, nomeAtual = '') {
+  editandoPastaId = id || null;
+  document.getElementById('modalPastaTitle').textContent = id ? 'Renomear Pasta' : 'Nova Pasta';
+  document.getElementById('pastaName').value = nomeAtual || '';
+  document.getElementById('pastaModal').classList.add('show');
+  setTimeout(() => document.getElementById('pastaName').focus(), 80);
+}
+
+async function salvarPasta() {
+  const name = document.getElementById('pastaName').value.trim();
+  if (!name) { showToast('Informe um nome para a pasta', 'err'); return; }
+  try {
+    // If renaming: update name in links too
+    if (editandoPastaId) {
+      const cat = todasCategorias.find(c => c.id === editandoPastaId);
+      const oldName = cat?.name;
+      await sbSalvarCategoria({ name, position: cat?.position ?? 0 }, editandoPastaId);
+      // Update links that had the old category name
+      if (oldName && oldName !== name) {
+        const linksToUpdate = todosLinks.filter(l => l.category === oldName);
+        for (const link of linksToUpdate) {
+          await sbSalvarLink({ title: link.title, url: link.url, description: link.description, category: name }, link.id);
+        }
+      }
+    } else {
+      const maxPos = todasCategorias.reduce((m, c) => Math.max(m, c.position || 0), -1);
+      await sbSalvarCategoria({ name, position: maxPos + 1 });
+    }
+    fecharModais();
+    await carregarTudo();
+    showToast(editandoPastaId ? '✅ Pasta renomeada!' : '✅ Pasta criada!', 'ok');
+  } catch (e) {
+    showToast('Erro: ' + e.message, 'err');
+  }
+}
+
+// ── Delete confirmations ──────────────────────────────
+function confirmarDelLink(id) {
+  document.getElementById('delModalTitle').textContent = 'Excluir Link';
+  document.getElementById('delModalMsg').textContent   = 'Tem certeza que quer excluir este link?';
+  document.getElementById('btnConfirmDel').onclick = async () => {
+    try {
+      await sbDeletarLink(id);
+      fecharModais();
+      await carregarTudo();
+      showToast('🗑 Link excluído', 'ok');
+    } catch (e) { showToast('Erro: ' + e.message, 'err'); }
+  };
+  document.getElementById('delModal').classList.add('show');
+}
+
+function confirmarDelPasta(id, nome) {
+  if (!id) { showToast('Esta pasta não pode ser excluída (sem ID)', 'err'); return; }
+  const qtd = todosLinks.filter(l => l.category === nome).length;
+  document.getElementById('delModalTitle').textContent = 'Excluir Pasta';
+  document.getElementById('delModalMsg').innerHTML = qtd
+    ? `Excluir a pasta "<strong>${escHtml(nome)}</strong>"? Os <strong>${qtd} link${qtd!==1?'s':''}</strong> dentro dela <strong>não serão excluídos</strong>, mas ficarão sem pasta.`
+    : `Excluir a pasta "<strong>${escHtml(nome)}</strong>"? Ela está vazia.`;
+  document.getElementById('btnConfirmDel').onclick = async () => {
+    try {
+      await sbDeletarCategoria(id);
+      fecharModais();
+      await carregarTudo();
+      showToast('🗑 Pasta excluída', 'ok');
+    } catch (e) { showToast('Erro: ' + e.message, 'err'); }
+  };
+  document.getElementById('delModal').classList.add('show');
+}
+
+function fecharModais() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+}
+</script>
+</body>
+</html>

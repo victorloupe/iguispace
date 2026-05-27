@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — iGUi Pranchas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<link rel="stylesheet" href="styles.css?v=20260527">
+<style>
+  .tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid var(--border);padding-bottom:0;}
+  .tab{padding:10px 20px;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
+  .tab.active{color:#1a2a3a;border-bottom-color:#1a2a3a;}
+  .tab-pane{display:none;}
+  .tab-pane.active{display:block;}
+
+  /* Users table */
+  .users-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .users-table th{background:#f0f4f8;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+  .users-table td{padding:10px 12px;border-bottom:1px solid var(--border);}
+  .users-table tr:last-child td{border-bottom:none;}
+  .users-table tr:hover td{background:#f8fafc;}
+  .role-badge{padding:2px 10px;border-radius:10px;font-size:10px;font-weight:700;}
+  .role-badge.admin{background:#edf7fd;color:var(--blue);}
+  .role-badge.user{background:#f0f4f8;color:var(--muted);}
+  .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}
+  .status-dot.on{background:#27ae60;}
+  .status-dot.off{background:#e74c3c;}
+
+  .btn-sm{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--muted);transition:all .15s;}
+  .btn-sm:hover{border-color:var(--blue);color:var(--blue);}
+  .btn-sm.danger:hover{border-color:#e74c3c;color:#e74c3c;}
+  .btn-sm.primary{background:#1a2a3a;color:#fff;border-color:#1a2a3a;}
+  .btn-sm.primary:hover{background:var(--blue);border-color:var(--blue);}
+
+  .section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .section-hd h3{font-size:14px;font-weight:700;color:#1a2a3a;}
+
+  /* Invite form */
+  .invite-form{background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:20px;margin-bottom:24px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+  .invite-form .field{flex:1;min-width:160px;}
+  .invite-form label{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+  .invite-form input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:13px;outline:none;background:#fff;}
+  .invite-form input:focus{border-color:var(--blue);}
+
+  /* Links in admin */
+  .links-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .links-table th{background:#f0f4f8;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+  .links-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .links-table tr:last-child td{border-bottom:none;}
+  .link-url-cell{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--blue);font-size:12px;}
+
+  /* Modal */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(18,30,42,.7);z-index:500;align-items:center;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,.15);}
+  .modal-title{font-size:16px;font-weight:700;color:#1a2a3a;margin-bottom:20px;}
+  .modal-field{margin-bottom:14px;}
+  .modal-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+  .modal-field input,.modal-field textarea,.modal-field select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color .15s;}
+  .modal-field input:focus,.modal-field select:focus,.modal-field textarea:focus{border-color:var(--blue);}
+  .modal-field textarea{resize:vertical;min-height:70px;}
+  .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+  .btn-modal{padding:9px 20px;border-radius:7px;font-family:'Inter',sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:none;}
+  .btn-modal.cancel{background:var(--gray);color:var(--muted);}
+  .btn-modal.confirm{background:#1a2a3a;color:#fff;}
+  .btn-modal.confirm:hover{background:var(--blue);}
+</style>
+</head>
+<body class="pg-projetos">
+
+<header>
+  <img id="headerLogo" data-logo="igui" style="height:44px;width:auto;display:block" alt="iGUI">
+  <div>
+    <h1>ADMIN <span>PANEL</span></h1>
+    <div class="hdr-sub">iGUi Pranchas &nbsp;·&nbsp; By: Victor L.</div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-actions" style="margin-top:auto;">
+      <!-- Navegação de Páginas (Mais minimalista, com ícones SVG iguais) -->
+      <div class="sidebar-label" style="margin-top:6px;margin-bottom:4px;padding-left:8px;">Espaço iGUi</div>
+      <nav class="steps" style="margin-bottom:6px;">
+        <a class="stp" href="index.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <rect x="2" y="3" width="12" height="10" rx="1.5"/>
+            <path d="M6 3v10M2 7h12"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Gerador</span>
+        </a>
+        <a class="stp" href="projetos.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <rect x="2" y="2" width="5" height="5" rx="1"/>
+            <rect x="9" y="2" width="5" height="5" rx="1"/>
+            <rect x="2" y="9" width="5" height="5" rx="1"/>
+            <rect x="9" y="9" width="5" height="5" rx="1"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Pranchas</span>
+        </a>
+        <a class="stp" href="links.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <path d="M7 9a3 3 0 004.24.1l2-2a3 3 0 00-4.24-4.24l-1.1 1.1"/>
+            <path d="M9 7a3 3 0 00-4.24-.1l-2 2a3 3 0 004.24 4.24l1.1-1.1"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Links</span>
+        </a>
+        <a class="stp active" href="admin.html" id="navAdmin" style="display:none">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <circle cx="8" cy="8" r="2.5"/>
+            <path d="M8 1v1.5M8 13.5v1.5M1 8h1.5M13.5 8h1.5M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Admin</span>
+        </a>
+      </nav>
+
+      <div class="sdb-divider"></div>
+      
+      <div class="sidebar-user-card">
+        <div class="su-avatar" id="userAvatar">?</div>
+        <div class="su-info">
+          <span class="su-name" id="hdrUser" title="Usuário logado">—</span>
+          <button class="su-signout" onclick="sbSignOut()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3H3a1 1 0 00-1 1v8a1 1 0 001 1h3"/><path d="M10 5l3 3-3 3M13 8H6"/></svg>
+            Sair
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <script>
+    (function() {
+      const cachedName = localStorage.getItem('igui_user_name');
+      const cachedIsAdmin = localStorage.getItem('igui_is_admin') === 'true';
+      const logoImg = document.getElementById('headerLogo');
+      if (logoImg && typeof LOGO_B64 !== 'undefined') {
+        logoImg.src = 'data:image/png;base64,' + LOGO_B64;
+      }
+      if (cachedName) {
+        const el = document.getElementById('hdrUser');
+        if (el) el.textContent = cachedName;
+        const av = document.getElementById('userAvatar');
+        if (av) {
+          const pts = cachedName.trim().split(/\s+/);
+          av.textContent = ((pts[0]?.[0]||'') + (pts[1]?.[0]||'')).toUpperCase() || '?';
+        }
+      }
+      if (cachedIsAdmin) {
+        const navAdmin = document.getElementById('navAdmin');
+        if (navAdmin) navAdmin.style.display = 'flex';
+        const adminBadge = document.getElementById('adminBadge');
+        if (adminBadge) adminBadge.style.display = 'inline-block';
+      }
+    })();
+  </script>
+
+  <div class="main-content">
+    <div class="proj-page-wrap">
+
+      <div class="tabs">
+        <button class="tab active" onclick="abaUsuarios()">👥 Usuários</button>
+        <button class="tab" onclick="abaLinks()">🔗 Links</button>
+      </div>
+
+      <!-- ABA USUÁRIOS -->
+      <div class="tab-pane active" id="paneUsuarios">
+
+        <div class="invite-form">
+          <div class="field">
+            <label>Nome</label>
+            <input type="text" id="inviteName" placeholder="Nome do usuário">
+          </div>
+          <div class="field">
+            <label>E-mail / Usuário</label>
+            <input type="text" id="inviteEmail" placeholder="usuario@email.com ou nome_usuario">
+          </div>
+          <button class="btn-sm primary" onclick="convidar()" style="flex-shrink:0;padding:9px 18px;font-size:12px;">+ Convidar usuário</button>
+        </div>
+
+        <div class="section-hd">
+          <h3>Usuários cadastrados</h3>
+          <span id="userCount" style="font-size:12px;color:var(--muted)">—</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th>Função</th>
+                <th>Status</th>
+                <th>Desde</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="usersBody">
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ABA LINKS -->
+      <div class="tab-pane" id="paneLinks">
+        <div class="section-hd">
+          <h3>Links cadastrados</h3>
+          <button class="btn-sm primary" onclick="abrirModalLink()">+ Novo Link</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="links-table">
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th>Categoria</th>
+                <th>URL</th>
+                <th>Descrição</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="linksBody">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal link -->
+<div class="modal-overlay" id="linkModal">
+  <div class="modal-box">
+    <div class="modal-title" id="linkModalTitle">Novo Link</div>
+    <div class="modal-field"><label>Título</label><input type="text" id="linkTitle" placeholder="Ex: Galeria 3D Warehouse"></div>
+    <div class="modal-field"><label>URL</label><input type="url" id="linkUrl" placeholder="https://..."></div>
+    <div class="modal-field">
+      <label>Categoria</label>
+      <select id="linkCategory">
+        <option value="3D Warehouse">3D Warehouse</option>
+        <option value="Revestimentos">Revestimentos</option>
+        <option value="Mobiliário">Mobiliário</option>
+        <option value="Paisagismo">Paisagismo</option>
+        <option value="Fornecedores">Fornecedores</option>
+        <option value="Referências">Referências</option>
+        <option value="Geral">Geral</option>
+      </select>
+    </div>
+    <div class="modal-field"><label>Descrição (opcional)</label><textarea id="linkDesc" placeholder="Breve descrição..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-modal confirm" onclick="salvarLink()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmação -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-title" id="confirmTitle">Confirmar</div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:20px" id="confirmMsg"></p>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-modal confirm" id="btnConfirmAcao" style="background:#e74c3c">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let usuarios = [];
+let todosLinks = [];
+let editandoLinkId = null;
+let meId = null;
+
+function showToast(msg, tipo='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${tipo} show`;
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const ok = await sbRequireAdmin();
+  if (!ok) return;
+
+  const user = await sbGetUser();
+  meId = user.id;
+  const profile = await sbGetProfile();
+  document.getElementById('hdrUser').textContent = profile?.name || profile?.email || '—';
+
+  await Promise.all([carregarUsuarios(), carregarLinks()]);
+});
+
+// ── Tabs ──
+function abaUsuarios() {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  document.getElementById('paneUsuarios').classList.add('active');
+  document.getElementById('paneLinks').classList.remove('active');
+}
+function abaLinks() {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===1));
+  document.getElementById('paneLinks').classList.add('active');
+  document.getElementById('paneUsuarios').classList.remove('active');
+}
+
+// ── Usuários ──
+async function carregarUsuarios() {
+  try {
+    usuarios = await sbListarUsuarios();
+    renderUsuarios();
+  } catch(e) {
+    showToast('Erro: '+e.message,'err');
+    const tbody = document.getElementById('usersBody');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#e74c3c;padding:30px;font-weight:600;">⚠️ Erro ao carregar usuários: ${escHtml(e.message)}</td></tr>`;
+    }
+  }
+}
+
+function renderUsuarios() {
+  const tbody = document.getElementById('usersBody');
+  document.getElementById('userCount').textContent = `${usuarios.length} usuário(s)`;
+  if (!usuarios.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">Nenhum usuário</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  usuarios.forEach(u => {
+    const isMe = u.id === meId;
+    const data = new Date(u.created_at).toLocaleDateString('pt-BR');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${escHtml(u.name||'—')}</strong>${isMe ? ' <span style="font-size:10px;color:var(--muted)">(você)</span>' : ''}</td>
+      <td style="color:var(--muted);font-size:12px">${escHtml(u.email)}</td>
+      <td><span class="role-badge ${u.role}">${u.role}</span></td>
+      <td><span class="status-dot ${u.active!==false?'on':'off'}"></span>${u.active!==false?'Ativo':'Inativo'}</td>
+      <td style="color:var(--muted);font-size:12px">${data}</td>
+      <td>
+        ${!isMe ? `
+          <div style="display:flex;gap:6px">
+            <button class="btn-sm" onclick="trocarRole('${u.id}','${u.role}')">${u.role==='admin'?'→ User':'→ Admin'}</button>
+            <button class="btn-sm danger" onclick="toggleAtivo('${u.id}',${u.active!==false})">${u.active!==false?'Desativar':'Ativar'}</button>
+          </div>
+        ` : '<span style="font-size:11px;color:var(--muted)">—</span>'}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function convidar() {
+  let email = document.getElementById('inviteEmail').value.trim();
+  const name  = document.getElementById('inviteName').value.trim();
+  if (!email) { showToast('Informe o e-mail ou usuário', 'err'); return; }
+  
+  const isUsernameOnly = !email.includes('@');
+  if (isUsernameOnly) {
+    email = email + '@igui.com';
+  }
+
+  try {
+    await sbConvidarUsuario(email, name);
+    document.getElementById('inviteEmail').value = '';
+    document.getElementById('inviteName').value  = '';
+    showToast(isUsernameOnly ? '✅ Usuário criado: ' + email.split('@')[0] : '✅ Convite enviado para ' + email, 'ok');
+    setTimeout(carregarUsuarios, 1500);
+  } catch(e) {
+    showToast('Erro ao convidar/criar: ' + e.message, 'err');
+  }
+}
+
+function trocarRole(id, roleAtual) {
+  const novaRole = roleAtual === 'admin' ? 'user' : 'admin';
+  const u = usuarios.find(u => u.id === id);
+  confirmar(
+    'Alterar função',
+    `Alterar ${u?.name||u?.email} para "${novaRole}"?`,
+    async () => {
+      await sbAlterarRole(id, novaRole);
+      await carregarUsuarios();
+      showToast('✅ Função alterada', 'ok');
+    }
+  );
+}
+
+function toggleAtivo(id, ativo) {
+  const u = usuarios.find(u => u.id === id);
+  confirmar(
+    ativo ? 'Desativar usuário' : 'Ativar usuário',
+    `${ativo?'Desativar':'Ativar'} ${u?.name||u?.email}?`,
+    async () => {
+      await sbAlterarAtivo(id, !ativo);
+      await carregarUsuarios();
+      showToast('✅ Status alterado', 'ok');
+    }
+  );
+}
+
+// ── Links ──
+async function carregarLinks() {
+  try {
+    todosLinks = await sbListarLinks();
+    renderLinksTable();
+  } catch(e) {
+    showToast('Erro: '+e.message,'err');
+    const tbody = document.getElementById('linksBody');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#e74c3c;padding:30px;font-weight:600;">⚠️ Erro ao carregar links: ${escHtml(e.message)}</td></tr>`;
+    }
+  }
+}
+
+function renderLinksTable() {
+  const tbody = document.getElementById('linksBody');
+  if (!todosLinks.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">Nenhum link cadastrado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  todosLinks.forEach(link => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${escHtml(link.title)}</strong></td>
+      <td><span style="background:#edf7fd;color:var(--blue);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700">${escHtml(link.category)}</span></td>
+      <td class="link-url-cell"><a href="${escHtml(link.url)}" target="_blank" style="color:var(--blue);text-decoration:none">${escHtml(link.url)}</a></td>
+      <td style="color:var(--muted);font-size:12px;max-width:200px">${escHtml(link.description||'—')}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn-sm" onclick="abrirModalLink('${link.id}')">✏️ Editar</button>
+          <button class="btn-sm danger" onclick="deletarLink('${link.id}')">🗑</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function abrirModalLink(id = null) {
+  editandoLinkId = id;
+  document.getElementById('linkModalTitle').textContent = id ? 'Editar Link' : 'Novo Link';
+  if (id) {
+    const link = todosLinks.find(l => l.id === id);
+    document.getElementById('linkTitle').value    = link.title;
+    document.getElementById('linkUrl').value      = link.url;
+    document.getElementById('linkCategory').value = link.category;
+    document.getElementById('linkDesc').value     = link.description || '';
+  } else {
+    document.getElementById('linkTitle').value    = '';
+    document.getElementById('linkUrl').value      = '';
+    document.getElementById('linkCategory').value = '3D Warehouse';
+    document.getElementById('linkDesc').value     = '';
+  }
+  document.getElementById('linkModal').classList.add('show');
+}
+
+async function salvarLink() {
+  const title       = document.getElementById('linkTitle').value.trim();
+  const url         = document.getElementById('linkUrl').value.trim();
+  const category    = document.getElementById('linkCategory').value;
+  const description = document.getElementById('linkDesc').value.trim();
+  if (!title || !url) { showToast('Título e URL obrigatórios', 'err'); return; }
+  try {
+    await sbSalvarLink({ title, url, description, category }, editandoLinkId);
+    fecharModal();
+    await carregarLinks();
+    showToast(editandoLinkId ? '✅ Link atualizado' : '✅ Link criado', 'ok');
+  } catch(e) { showToast('Erro: '+e.message,'err'); }
+}
+
+function deletarLink(id) {
+  const link = todosLinks.find(l => l.id === id);
+  confirmar('Excluir Link', `Excluir "${link?.title}"?`, async () => {
+    await sbDeletarLink(id);
+    await carregarLinks();
+    showToast('🗑 Link excluído', 'ok');
+  });
+}
+
+// ── Confirmar genérico ──
+function confirmar(titulo, msg, cb) {
+  document.getElementById('confirmTitle').textContent = titulo;
+  document.getElementById('confirmMsg').textContent   = msg;
+  document.getElementById('confirmModal').classList.add('show');
+  document.getElementById('btnConfirmAcao').onclick = async () => {
+    try { await cb(); } catch(e) { showToast('Erro: '+e.message,'err'); }
+    fecharModal();
+  };
+}
+
+function fecharModal() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+}
+</script>
+</body>
+</html>

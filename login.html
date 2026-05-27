@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — iGUi Pranchas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Inter+Tight:wght@600;700;800&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:#e2eaf3;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+
+  .logo-wrap{display:flex;align-items:center;gap:14px;margin-bottom:32px;}
+  .logo-text{font-family:'Inter Tight',sans-serif;font-size:22px;font-weight:800;color:#1a2a3a;letter-spacing:.5px;}
+  .logo-text span{color:#00AEEF;}
+  .logo-badge{background:#1a2a3a;color:#fff;font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:4px;text-transform:uppercase;}
+
+  .card{background:#fff;border-radius:16px;box-shadow:0 4px 32px rgba(0,0,0,.10);padding:40px 44px;width:100%;max-width:400px;}
+  .card-title{font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:800;color:#1a2a3a;margin-bottom:4px;}
+  .card-sub{font-size:13px;color:#7f8c9a;margin-bottom:28px;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:11px;font-weight:700;color:#7f8c9a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+  .field input{width:100%;padding:11px 14px;border:1.5px solid #d0dce8;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;color:#1a2a3a;outline:none;transition:border-color .15s;}
+  .field input:focus{border-color:#00AEEF;}
+
+  .btn-login{width:100%;background:#1a2a3a;color:#fff;border:none;padding:13px;border-radius:8px;font-family:'Inter Tight',sans-serif;font-weight:700;font-size:14px;cursor:pointer;letter-spacing:.3px;transition:background .2s;margin-top:8px;}
+  .btn-login:hover{background:#00AEEF;}
+  .btn-login:disabled{opacity:.5;cursor:not-allowed;}
+
+  .forgot{display:block;text-align:center;margin-top:14px;font-size:12px;color:#7f8c9a;text-decoration:none;}
+  .forgot:hover{color:#00AEEF;}
+
+  .error-msg{background:#fdf2f1;border:1px solid #f5c6c2;color:#c0392b;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none;}
+  .error-msg.show{display:block;}
+
+  .reset-wrap{display:none;}
+  .reset-wrap.show{display:block;}
+  .login-wrap.hide{display:none;}
+
+  .back-link{display:block;text-align:center;margin-top:14px;font-size:12px;color:#7f8c9a;cursor:pointer;}
+  .back-link:hover{color:#00AEEF;}
+
+  .success-msg{background:#e8f5e9;border:1px solid #c8e6c9;color:#27ae60;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none;}
+  .success-msg.show{display:block;}
+
+  footer{margin-top:24px;font-size:11px;color:#a0b0c0;}
+</style>
+</head>
+<body>
+
+<div class="logo-wrap">
+  <div>
+    <div class="logo-text">iGUi <span>Pranchas</span></div>
+    <div class="logo-badge">Sistema Técnico</div>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div class="card" id="loginCard">
+
+  <div class="login-wrap" id="loginWrap">
+    <div class="card-title">Entrar</div>
+    <div class="card-sub">Acesse com seu e-mail e senha</div>
+
+    <div class="error-msg" id="loginError"></div>
+
+    <form onsubmit="handleLogin(event)">
+      <div class="field">
+        <label>Usuário / E-mail</label>
+        <input type="text" id="loginEmail" placeholder="Ex: milena ou seu@email.com" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button class="btn-login" id="btnLogin" type="submit">Entrar</button>
+    </form>
+
+    <a class="forgot" onclick="mostrarReset()">Esqueci minha senha</a>
+  </div>
+
+  <!-- RESET DE SENHA -->
+  <div class="reset-wrap" id="resetWrap">
+    <div class="card-title">Redefinir senha</div>
+    <div class="card-sub">Enviaremos um link para seu e-mail</div>
+
+    <div class="error-msg"   id="resetError"></div>
+    <div class="success-msg" id="resetSuccess"></div>
+
+    <form onsubmit="handleReset(event)">
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="resetEmail" placeholder="seu@email.com" required>
+      </div>
+      <button class="btn-login" id="btnReset" type="submit">Enviar link</button>
+    </form>
+
+    <span class="back-link" onclick="mostrarLogin()">← Voltar ao login</span>
+  </div>
+
+</div>
+
+<footer>iGUi © 2025 · By: Victor L.</footer>
+
+<script>
+  // Se já estiver logado, redireciona
+  (async () => {
+    const s = await sbGetSession();
+    if (s) window.location.href = 'index.html';
+  })();
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    let email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const btn      = document.getElementById('btnLogin');
+    const errEl    = document.getElementById('loginError');
+
+    // Se o usuário digitou apenas o nome de usuário (sem @), adiciona o domínio padrão @igui.com
+    if (email && !email.includes('@')) {
+      email = email + '@igui.com';
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+    errEl.classList.remove('show');
+
+    const { error } = await sbSignIn(email, password);
+    if (error) {
+      errEl.textContent = traduzirErro(error.message);
+      errEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return;
+    }
+
+    // Verificar se conta está ativa
+    const profile = await sbGetProfile();
+    if (profile && profile.active === false) {
+      await sbSignOut();
+      errEl.textContent = 'Conta desativada. Entre em contato com o administrador.';
+      errEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return;
+    }
+
+    window.location.href = 'index.html';
+  }
+
+  async function handleReset(e) {
+    e.preventDefault();
+    const email  = document.getElementById('resetEmail').value.trim();
+    const btn    = document.getElementById('btnReset');
+    const errEl  = document.getElementById('resetError');
+    const sucEl  = document.getElementById('resetSuccess');
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+    errEl.classList.remove('show');
+    sucEl.classList.remove('show');
+
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/index.html'
+    });
+
+    if (error) {
+      errEl.textContent = traduzirErro(error.message);
+      errEl.classList.add('show');
+    } else {
+      sucEl.textContent = 'Link enviado! Verifique seu e-mail.';
+      sucEl.classList.add('show');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Enviar link';
+  }
+
+  function mostrarReset() {
+    document.getElementById('loginWrap').classList.add('hide');
+    document.getElementById('resetWrap').classList.add('show');
+  }
+  function mostrarLogin() {
+    document.getElementById('resetWrap').classList.remove('show');
+    document.getElementById('loginWrap').classList.remove('hide');
+  }
+
+  function traduzirErro(msg) {
+    if (msg.includes('Invalid login'))     return 'E-mail ou senha incorretos.';
+    if (msg.includes('Email not confirmed')) return 'E-mail não confirmado. Verifique sua caixa de entrada.';
+    if (msg.includes('too many requests')) return 'Muitas tentativas. Aguarde alguns minutos.';
+    return 'Erro: ' + msg;
+  }
+</script>
+</body>
+</html>

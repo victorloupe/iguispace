@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pranchas Geradas – iGUi</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<link rel="stylesheet" href="styles.css?v=20260527">
+</head>
+<body class="pg-projetos">
+
+<header>
+  <img id="headerLogo" data-logo="igui" style="height:44px;width:auto;display:block" alt="iGUI">
+  <div>
+    <h1>PRANCHAS <span>GERADAS</span></h1>
+    <div class="hdr-sub">Histórico iGUi &nbsp;·&nbsp; By: Victor L.</div>
+  </div>
+  <div class="hdr-right" style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+    <span id="adminBadge" style="display:none;background:rgba(0,174,239,.15);border:1px solid rgba(0,174,239,.4);color:var(--blue);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;">Admin</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-actions" style="margin-top:auto;">
+      <!-- Navegação de Páginas (Mais minimalista, com ícones SVG iguais) -->
+      <div class="sidebar-label" style="margin-top:6px;margin-bottom:4px;padding-left:8px;">Espaço iGUi</div>
+      <nav class="steps" style="margin-bottom:6px;">
+        <a class="stp" href="index.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <rect x="2" y="3" width="12" height="10" rx="1.5"/>
+            <path d="M6 3v10M2 7h12"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Gerador</span>
+        </a>
+        <a class="stp active" href="projetos.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <rect x="2" y="2" width="5" height="5" rx="1"/>
+            <rect x="9" y="2" width="5" height="5" rx="1"/>
+            <rect x="2" y="9" width="5" height="5" rx="1"/>
+            <rect x="9" y="9" width="5" height="5" rx="1"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Pranchas</span>
+        </a>
+        <a class="stp" href="links.html">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <path d="M7 9a3 3 0 004.24.1l2-2a3 3 0 00-4.24-4.24l-1.1 1.1"/>
+            <path d="M9 7a3 3 0 00-4.24-.1l-2 2a3 3 0 004.24 4.24l1.1-1.1"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Links</span>
+        </a>
+        <a class="stp" href="admin.html" id="navAdmin" style="display:none">
+          <svg class="sdb-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;opacity:0.85;">
+            <circle cx="8" cy="8" r="2.5"/>
+            <path d="M8 1v1.5M8 13.5v1.5M1 8h1.5M13.5 8h1.5M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06"/>
+          </svg>
+          <span class="stp-txt" style="font-weight:inherit;">Admin</span>
+        </a>
+      </nav>
+
+      <div class="sdb-divider"></div>
+      
+      <div class="sidebar-user-card">
+        <div class="su-avatar" id="userAvatar">?</div>
+        <div class="su-info">
+          <span class="su-name" id="hdrUser" title="Usuário logado">—</span>
+          <button class="su-signout" onclick="sbSignOut()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3H3a1 1 0 00-1 1v8a1 1 0 001 1h3"/><path d="M10 5l3 3-3 3M13 8H6"/></svg>
+            Sair
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <script>
+    (function() {
+      const cachedName = localStorage.getItem('igui_user_name');
+      const cachedIsAdmin = localStorage.getItem('igui_is_admin') === 'true';
+      const logoImg = document.getElementById('headerLogo');
+      if (logoImg && typeof LOGO_B64 !== 'undefined') {
+        logoImg.src = 'data:image/png;base64,' + LOGO_B64;
+      }
+      if (cachedName) {
+        const el = document.getElementById('hdrUser');
+        if (el) el.textContent = cachedName;
+        const av = document.getElementById('userAvatar');
+        if (av) {
+          const pts = cachedName.trim().split(/\s+/);
+          av.textContent = ((pts[0]?.[0]||'') + (pts[1]?.[0]||'')).toUpperCase() || '?';
+        }
+      }
+      if (cachedIsAdmin) {
+        const navAdmin = document.getElementById('navAdmin');
+        if (navAdmin) navAdmin.style.display = 'flex';
+        const adminBadge = document.getElementById('adminBadge');
+        if (adminBadge) adminBadge.style.display = 'inline-block';
+      }
+    })();
+  </script>
+
+  <!-- CONTEÚDO -->
+  <div class="main-content">
+    <div class="proj-page-wrap">
+
+      <!-- Barra de busca -->
+      <div class="proj-search-bar">
+        <div class="proj-search-inner">
+          <svg class="proj-search-icon-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4"/><path d="M11 11l2.5 2.5"/></svg>
+          <input type="text" id="campoBusca" class="proj-search-input"
+            placeholder="       Buscar por ID, franquia, modelo ou cliente..."
+            oninput="buscarProjetos(this.value)" autocomplete="off">
+          <button class="proj-search-clear" id="btnLimparBusca" onclick="limparBusca()" title="Limpar">✕</button>
+        </div>
+        <div class="proj-count" id="projetosCount">Carregando...</div>
+      </div>
+
+      <!-- Filtros por usuário -->
+      <div class="proj-filter-bar" id="userFilterBar" style="display:none"></div>
+
+      <!-- Lista de pranchas -->
+      <div class="proj-lista" id="projetosLista">
+        <div class="proj-empty">Carregando pranchas...</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Overlay carregando projeto -->
+<div class="overlay" id="loadOverlay" style="z-index:999">
+  <div class="spin"></div>
+  <div class="load-txt" id="loadOverlayTxt">Carregando projeto...</div>
+  <div class="load-sub">Baixando imagens da nuvem, aguarde...</div>
+  <div class="load-progress-wrap"><div class="load-progress-bar" id="loadOverlayBar" style="width:0%"></div></div>
+</div>
+
+<!-- Modal de confirmação de exclusão -->
+<div class="modal-overlay" id="delModal">
+  <div class="modal-box">
+    <div class="modal-title">Excluir Prancha</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      Excluir esta prancha do histórico?<br>
+      <strong>O PDF já gerado não é afetado.</strong>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal cancel" onclick="fecharModalDel()">Cancelar</button>
+      <button class="btn-modal confirm" style="background:#e74c3c" id="btnConfirmDel">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<script src="projetos.js"></script>
+</body>
+</html>

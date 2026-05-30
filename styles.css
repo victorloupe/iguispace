@@ -892,3 +892,16 @@ body.pg-projetos { background: #e2eaf3; }
   .chat-left { width: 160px; }
   .msg-wrap { max-width: 88%; }
 }
+
+/* Badge de mensagens não lidas no nav */
+.chat-nav-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e74c3c;
+  border: 2px solid #fff;
+  display: none;
+}

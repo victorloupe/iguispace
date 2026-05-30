@@ -2082,6 +2082,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch(e) { console.warn('Profile load error:', e); }
 
+  sbVerificarMsgNaoLidas().then(temNova => {
+    const badge = document.getElementById('chatNavBadge');
+    if (badge) badge.style.display = temNova ? 'block' : 'none';
+  }).catch(() => {});
+
   setLogoImages();
 
   // Init date

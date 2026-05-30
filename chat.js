@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof setLogoImages === 'function') setLogoImages();
 
+  // Mark chat as seen now
+  localStorage.setItem('igui_chat_last_seen', new Date().toISOString());
+
   // Process expired pins and scheduled messages silently in background
   sbProcessarPinsExpirados().catch(() => {});
 
@@ -106,6 +109,7 @@ async function selecionarCanal(channelId, type, name) {
   hasMore = false;
   oldestCreatedAt = null;
   pinnedMsg = null;
+  localStorage.setItem('igui_chat_last_seen', new Date().toISOString());
 
   // Update UI active state
   document.querySelectorAll('.chat-ch-item').forEach(el => el.classList.remove('active'));

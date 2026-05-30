@@ -437,4 +437,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (nav)   nav.style.display   = 'flex';
     }
   }
+
+  sbVerificarMsgNaoLidas().then(temNova => {
+    const badge = document.getElementById('chatNavBadge');
+    if (badge) badge.style.display = temNova ? 'block' : 'none';
+  }).catch(() => {});
 });

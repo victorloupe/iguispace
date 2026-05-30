@@ -645,3 +645,17 @@ function sbEscutarMensagens(channelId, callback) {
     }, callback)
     .subscribe();
 }
+
+/** Retorna true se há mensagens não lidas desde a última visita ao chat. */
+async function sbVerificarMsgNaoLidas() {
+  const lastSeen = localStorage.getItem('igui_chat_last_seen') || '1970-01-01T00:00:00Z';
+  const user = await sbGetUser();
+  if (!user) return false;
+  const { count } = await sb.from('chat_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'sent')
+    .eq('deleted', false)
+    .neq('sender_id', user.id)
+    .gt('created_at', lastSeen);
+  return (count || 0) > 0;
+}

@@ -453,3 +453,195 @@ async function sbConvidarUsuario(email, name) {
   if (error) throw error;
   return data;
 }
+
+
+// ── Chat ──────────────────────────────────────────────
+
+/** Lista canais disponíveis para o usuário (público + DMs). */
+async function sbListarCanais() {
+  const { data, error } = await sb.from('chat_channels')
+    .select('*')
+    .order('created_at');
+  if (error) throw error;
+  return data || [];
+}
+
+/** Lista todos os usuários ativos (para montar lista de DMs). */
+async function sbListarTodosUsuarios() {
+  const { data, error } = await sb.from('profiles')
+    .select('id, name, email, role, active')
+    .eq('active', true)
+    .order('name');
+  if (error) throw error;
+  return data || [];
+}
+
+/** Abre (ou cria) um canal DM entre o usuário atual e userId. Idempotente. */
+async function sbCriarOuAbrirDM(userId) {
+  const me = await sbGetUser();
+
+  // Encontra canais onde eu sou membro
+  const { data: myMemberships } = await sb.from('chat_members')
+    .select('channel_id')
+    .eq('user_id', me.id);
+
+  if (myMemberships?.length) {
+    const myIds = myMemberships.map(m => m.channel_id);
+
+    // Canais que o outro usuário também tem
+    const { data: shared } = await sb.from('chat_members')
+      .select('channel_id')
+      .eq('user_id', userId)
+      .in('channel_id', myIds);
+
+    if (shared?.length) {
+      const { data: dmCh } = await sb.from('chat_channels')
+        .select('*')
+        .eq('id', shared[0].channel_id)
+        .eq('type', 'dm')
+        .maybeSingle();
+      if (dmCh) return dmCh;
+    }
+  }
+
+  // Cria novo canal DM
+  const { data: newCh, error } = await sb.from('chat_channels')
+    .insert({ type: 'dm', created_by: me.id })
+    .select()
+    .single();
+  if (error) throw error;
+
+  await sb.from('chat_members').insert([
+    { channel_id: newCh.id, user_id: me.id },
+    { channel_id: newCh.id, user_id: userId }
+  ]);
+
+  return newCh;
+}
+
+/**
+ * Carrega mensagens de um canal (paginação reversa).
+ * before: ISO string — retorna mensagens anteriores a esse timestamp.
+ * Usa truque de 51 itens para detectar se há mais.
+ * Retorna { mensagens: [...em ordem cronológica], hasMore: bool }.
+ */
+async function sbCarregarMensagens(channelId, before = null) {
+  let q = sb.from('chat_messages')
+    .select('*')
+    .eq('channel_id', channelId)
+    .order('created_at', { ascending: false })
+    .limit(51);
+
+  if (before) q = q.lt('created_at', before);
+
+  const { data, error } = await q;
+  if (error) throw error;
+  const raw = data || [];
+  const hasMore = raw.length === 51;
+  const slice = hasMore ? raw.slice(0, 50) : raw;
+  // Reverse to chronological order for display
+  return { mensagens: slice.reverse(), hasMore };
+}
+
+/** Envia mensagem imediata. */
+async function sbEnviarMensagem(channelId, content) {
+  const user = await sbGetUser();
+  const profile = await sbGetProfile();
+  const senderName = profile?.name || user?.email?.split('@')[0] || 'Usuário';
+
+  const { error } = await sb.from('chat_messages').insert({
+    channel_id: channelId,
+    sender_id: user.id,
+    sender_name: senderName,
+    content,
+    status: 'sent'
+  });
+  if (error) throw error;
+}
+
+/** Cria mensagem agendada (admin). */
+async function sbAgendarMensagem(channelId, content, scheduledAt) {
+  const user = await sbGetUser();
+  const profile = await sbGetProfile();
+  const senderName = profile?.name || user?.email?.split('@')[0] || 'Admin';
+
+  const { error } = await sb.from('chat_messages').insert({
+    channel_id: channelId,
+    sender_id: user.id,
+    sender_name: senderName,
+    content,
+    status: 'scheduled',
+    scheduled_at: scheduledAt
+  });
+  if (error) throw error;
+}
+
+/** Processa mensagens agendadas cujo scheduled_at já passou (client-side, admin only). */
+async function sbProcessarAgendadas(channelId) {
+  const now = new Date().toISOString();
+  let q = sb.from('chat_messages')
+    .select('id')
+    .eq('status', 'scheduled')
+    .lte('scheduled_at', now);
+
+  if (channelId) q = q.eq('channel_id', channelId);
+
+  const { data: pending } = await q;
+  if (pending?.length) {
+    await sb.from('chat_messages')
+      .update({ status: 'sent' })
+      .in('id', pending.map(m => m.id));
+  }
+}
+
+/** Fixa uma mensagem. pinUntil = ISO string ou null (sem expiração). */
+async function sbFixarMensagem(msgId, pinUntil = null) {
+  const { error } = await sb.from('chat_messages')
+    .update({ pinned: true, pin_until: pinUntil })
+    .eq('id', msgId);
+  if (error) throw error;
+}
+
+/** Desafixa uma mensagem. */
+async function sbDesafixarMensagem(msgId) {
+  const { error } = await sb.from('chat_messages')
+    .update({ pinned: false, pin_until: null })
+    .eq('id', msgId);
+  if (error) throw error;
+}
+
+/** Desafixa mensagens com pin_until expirado (client-side). */
+async function sbProcessarPinsExpirados() {
+  const now = new Date().toISOString();
+  const { data: expired } = await sb.from('chat_messages')
+    .select('id')
+    .eq('pinned', true)
+    .not('pin_until', 'is', null)
+    .lt('pin_until', now);
+
+  if (expired?.length) {
+    await sb.from('chat_messages')
+      .update({ pinned: false, pin_until: null })
+      .in('id', expired.map(m => m.id));
+  }
+}
+
+/** Soft-delete de mensagem (conteúdo apagado, registro mantido). */
+async function sbDeletarMensagemChat(msgId) {
+  const { error } = await sb.from('chat_messages')
+    .update({ deleted: true, content: '[apagada]' })
+    .eq('id', msgId);
+  if (error) throw error;
+}
+
+/** Assina eventos Realtime de um canal. Retorna o channel handle para unsubscribe. */
+function sbEscutarMensagens(channelId, callback) {
+  return sb.channel(`chat-${channelId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'chat_messages',
+      filter: `channel_id=eq.${channelId}`
+    }, callback)
+    .subscribe();
+}

@@ -1062,11 +1062,12 @@ body.pg-projetos { background: #e2eaf3; }
     padding: 10px 8px !important;
   }
 
-  /* Oculta abas restritas na barra lateral */
-  .sidebar nav.steps a[href="index.html"],
-  .sidebar nav.steps a[href="projetos.html"],
-  .sidebar nav.steps a[href="links.html"],
-  .sidebar nav.steps a[href="admin.html"] {
+  /* Oculta abas restritas na barra lateral (compatível com clean URLs do Netlify) */
+  .sidebar nav.steps a[href*="index"],
+  .sidebar nav.steps a[href*="projetos"],
+  .sidebar nav.steps a[href*="links"],
+  .sidebar nav.steps a[href*="admin"],
+  .sidebar nav.steps a[href="/"] {
     display: none !important;
   }
   
